@@ -283,6 +283,25 @@
 
   function setLS() { try { ctx.letterSpacing = LS + 'px'; } catch (e) {} }
 
+  // 시드 기반 의사난수 — 같은 입력 텍스트엔 같은 흔들림 패턴 (매 키스트로크마다 튀지 않게)
+  function hashStr(s) {
+    let h = 2166136261 >>> 0;
+    for (let i = 0; i < s.length; i++) {
+      h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+    }
+    return h >>> 0;
+  }
+  function seededRandom(seed) {
+    let s = seed >>> 0;
+    return function () {
+      s = (s + 0x6D2B79F5) >>> 0;
+      let t = s;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
   // 한지 질감 — 한 번만 생성해서 캐시. 픽셀 노이즈 + 큰 얼룩 + 긴 식물섬유 + 부드러운 색얼룩 + 비네팅.
   let paperTexture = null;
   function buildPaperTexture() {
@@ -521,20 +540,56 @@
       ctx.fillText(tag, W / 2, py + ph / 2 + 4);
     }
 
-    // 헤드라인 — 먹빛 + 획 강화 (faux-bold: stroke + fill 같은 색)
+    // 헤드라인 — 먹빛 + 획 강화 + 손글씨 흔들림
     ctx.font = `400 ${f}px ${HEAD_FONT}`;
     setLS();
     ctx.fillStyle = INK_COLOR;
     ctx.strokeStyle = INK_COLOR;
-    ctx.lineWidth = Math.max(2, f * 0.035);
     ctx.lineJoin = 'round';
     ctx.miterLimit = 2;
-    ctx.textAlign = "center";
     ctx.textBaseline = "middle";
+
+    const baseLW = Math.max(2, f * 0.035);
+    const rand = seededRandom(hashStr(title + '|' + f));
+
     lines.forEach((ln, i) => {
-      const y = startY + i * lh;
-      ctx.strokeText(ln, W / 2, y);
-      ctx.fillText(ln, W / 2, y);
+      if (!ln) return;
+
+      // 라인 단위 흔들림 — 회전, 위치, 두께 미세 변화
+      const lineDX = (rand() - 0.5) * 14;          // 가로 ±7px
+      const lineDY = (rand() - 0.5) * 7;           // 세로 ±3.5px
+      const lineRot = (rand() - 0.5) * 0.022;      // ±0.63°
+      const lineLW = baseLW * (0.88 + rand() * 0.22); // 두께 ±11%
+
+      const baseY = startY + i * lh + lineDY;
+
+      ctx.save();
+      ctx.translate(W / 2 + lineDX, baseY);
+      ctx.rotate(lineRot);
+      ctx.lineWidth = lineLW;
+
+      // per-char 베이스라인 흔들림 — 사인 곡선 드리프트 + 미세 jitter
+      const chars = Array.from(ln);
+      const widths = chars.map(c => ctx.measureText(c).width);
+      const total = widths.reduce((a, b) => a + b, 0);
+      let x = -total / 2;
+
+      const phase = rand() * Math.PI * 2;
+      const freq = 0.8 + rand() * 1.2;
+      const amp = 1.5 + rand() * 2.2;
+
+      ctx.textAlign = 'center';
+      chars.forEach((ch, j) => {
+        const tNorm = chars.length <= 1 ? 0 : j / (chars.length - 1);
+        const drift = Math.sin(phase + tNorm * freq * Math.PI * 2) * amp;
+        const micro = (rand() - 0.5) * 1.6;
+        const cx = x + widths[j] / 2;
+        ctx.strokeText(ch, cx, drift + micro);
+        ctx.fillText(ch, cx, drift + micro);
+        x += widths[j];
+      });
+
+      ctx.restore();
     });
 
     drawLogo();
