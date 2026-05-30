@@ -395,8 +395,15 @@
   }
 
   function drawLogo() {
-    const d = 116;
-    const cx = W / 2, cy = H - 188;
+    const d = 168;
+    const rightPad = 70;
+    const bottomPad = 70;
+    const handleSize = 30;
+    const gap = 14;
+
+    const cx = W - rightPad - d / 2;
+    const cy = H - bottomPad - handleSize - gap - d / 2;
+
     ctx.save();
     ctx.beginPath(); ctx.arc(cx, cy, d / 2, 0, Math.PI * 2); ctx.closePath();
     ctx.fillStyle = "#ffffff"; ctx.fill();
@@ -404,13 +411,13 @@
     if (logoLoaded) drawCover(logoImg, cx - d / 2, cy - d / 2, d, d);
     ctx.restore();
     ctx.beginPath(); ctx.arc(cx, cy, d / 2, 0, Math.PI * 2);
-    ctx.lineWidth = 3; ctx.strokeStyle = "rgba(0,0,0,0.12)"; ctx.stroke();
+    ctx.lineWidth = 3; ctx.strokeStyle = "rgba(0,0,0,0.16)"; ctx.stroke();
 
     ctx.letterSpacing = '0px';
-    ctx.fillStyle = "rgba(0,0,0,0.5)";
-    ctx.font = "700 30px Pretendard, sans-serif";
-    ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillText(CHANNEL, cx, cy + d / 2 + 16);
+    ctx.fillStyle = "rgba(20,15,5,0.65)";
+    ctx.font = `700 ${handleSize}px Pretendard, sans-serif`;
+    ctx.textAlign = "right"; ctx.textBaseline = "top";
+    ctx.fillText(CHANNEL, W - rightPad, cy + d / 2 + gap);
   }
 
   function render() {
@@ -507,16 +514,31 @@
     }, 'image/png');
   }
 
-  // 폰트 로드 후 첫 렌더 + 종이 질감 미리 생성
+  // 종이 질감 미리 생성 + 폰트가 늦게 로드돼도 자동 재렌더
+  paperTexture = buildPaperTexture();
+
+  async function waitForHandwriting() {
+    // 한글이 실제로 로드됐는지 확인 — 영문만 들어가는 라이트닝 로드를 피함
+    for (let i = 0; i < 40; i++) {
+      try {
+        await document.fonts.load("100px 'Nanum Pen Script'", "글");
+      } catch (e) {}
+      if (document.fonts.check("100px 'Nanum Pen Script'", "글")) return true;
+      await new Promise(r => setTimeout(r, 100));
+    }
+    return false;
+  }
+
   (async () => {
-    try {
-      await document.fonts.load("100px 'Nanum Pen Script'");
-      await document.fonts.load("700 100px 'Gaegu'");
-      await document.fonts.ready;
-    } catch (e) {}
-    paperTexture = buildPaperTexture();
-    render();
+    render(); // 폰트 늦더라도 일단 한 번 그림 (fallback로라도 보이게)
+    await waitForHandwriting();
+    render(); // 손글씨 로드 후 다시 그림
   })();
+
+  // 폰트 모두 settle되면 한 번 더 안전망
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => render());
+  }
 </script>
 </body>
 </html>
