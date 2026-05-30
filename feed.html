@@ -202,8 +202,8 @@
     </div>
     <div class="size-control">
       <label>세로 위치</label>
-      <input type="range" id="verticalPos" min="26" max="52" value="43">
-      <span class="size-value" id="verticalPosValue">43%</span>
+      <input type="range" id="verticalPos" min="28" max="58" value="50">
+      <span class="size-value" id="verticalPosValue">50%</span>
     </div>
     <button class="secondary" onclick="resetSize()">글자 크기 자동으로</button>
   </div>
@@ -283,57 +283,111 @@
 
   function setLS() { try { ctx.letterSpacing = LS + 'px'; } catch (e) {} }
 
-  // 종이 질감 — 한 번만 생성해서 캐시. 미세 노이즈 + 작은 얼룩 + 약한 비네팅.
+  // 한지 질감 — 한 번만 생성해서 캐시. 픽셀 노이즈 + 큰 얼룩 + 긴 식물섬유 + 부드러운 색얼룩 + 비네팅.
   let paperTexture = null;
   function buildPaperTexture() {
     const t = document.createElement('canvas');
     t.width = W; t.height = H;
     const tc = t.getContext('2d');
 
-    // 1) 미세 노이즈 (밝은/어두운 픽셀 점)
-    const img = tc.createImageData(W, H);
+    // 1) 부드러운 색 얼룩 — 한지 특유의 불균일한 톤. 큰 갈색/황톳빛 블롭을 깔아둠.
+    for (let i = 0; i < 22; i++) {
+      const x = Math.random() * W, y = Math.random() * H;
+      const r = 180 + Math.random() * 360;
+      const grad = tc.createRadialGradient(x, y, 0, x, y, r);
+      const tone = Math.random() < 0.5
+        ? `rgba(160,120,70,${0.05 + Math.random() * 0.07})`   // 황톳빛
+        : `rgba(110,90,60,${0.04 + Math.random() * 0.06})`;   // 갈색
+      grad.addColorStop(0, tone);
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      tc.fillStyle = grad;
+      tc.fillRect(0, 0, W, H);
+    }
+
+    // 2) 미세 픽셀 노이즈 — 종이의 거칠한 표면
+    const img = tc.getImageData(0, 0, W, H);
     for (let i = 0; i < img.data.length; i += 4) {
       const v = Math.random();
-      // 약간 황톳빛 도는 노이즈 — 갈색 톤
-      const r = v < 0.5 ? 60 : 200;
-      const g = v < 0.5 ? 45 : 195;
-      const b = v < 0.5 ? 25 : 180;
-      img.data[i]     = r;
-      img.data[i + 1] = g;
-      img.data[i + 2] = b;
-      img.data[i + 3] = Math.random() * 18; // 매우 옅은 알파
+      // 약간 황톳빛 도는 노이즈
+      const dark = v < 0.5;
+      const a = Math.random() * 28; // 알파 좀 더 강화
+      const r = dark ? 60 : 220;
+      const g = dark ? 45 : 215;
+      const b = dark ? 25 : 200;
+      // 기존 픽셀과 알파 블렌딩
+      const oa = img.data[i + 3] / 255;
+      const na = a / 255;
+      const blend = na + oa * (1 - na);
+      if (blend > 0) {
+        img.data[i]     = (r * na + img.data[i]     * oa * (1 - na)) / blend;
+        img.data[i + 1] = (g * na + img.data[i + 1] * oa * (1 - na)) / blend;
+        img.data[i + 2] = (b * na + img.data[i + 2] * oa * (1 - na)) / blend;
+        img.data[i + 3] = blend * 255;
+      }
     }
     tc.putImageData(img, 0, 0);
 
-    // 2) 큰 얼룩 / 종이 결 — 옅은 갈색 원
-    for (let i = 0; i < 70; i++) {
-      const a = 0.015 + Math.random() * 0.035;
-      tc.fillStyle = `rgba(95,70,40,${a})`;
-      const rad = 2 + Math.random() * 7;
+    // 3) 한지 식물섬유 — 길고 가는 곡선, 사방으로. 한지의 가장 큰 특징.
+    for (let i = 0; i < 280; i++) {
+      const a = 0.04 + Math.random() * 0.10;
+      tc.strokeStyle = Math.random() < 0.5
+        ? `rgba(120,85,45,${a})`   // 갈색 섬유
+        : `rgba(85,65,30,${a})`;   // 진한 갈색 섬유
+      tc.lineWidth = 0.4 + Math.random() * 1.1;
+      tc.lineCap = 'round';
+      tc.beginPath();
+      const x1 = Math.random() * W;
+      const y1 = Math.random() * H;
+      const len = 60 + Math.random() * 280;
+      const ang = Math.random() * Math.PI * 2;
+      const x2 = x1 + Math.cos(ang) * len;
+      const y2 = y1 + Math.sin(ang) * len;
+      // 살짝 휘는 베지에 곡선
+      const cx1 = x1 + Math.cos(ang) * len * 0.33 + (Math.random() - 0.5) * 24;
+      const cy1 = y1 + Math.sin(ang) * len * 0.33 + (Math.random() - 0.5) * 24;
+      const cx2 = x1 + Math.cos(ang) * len * 0.66 + (Math.random() - 0.5) * 24;
+      const cy2 = y1 + Math.sin(ang) * len * 0.66 + (Math.random() - 0.5) * 24;
+      tc.moveTo(x1, y1);
+      tc.bezierCurveTo(cx1, cy1, cx2, cy2, x2, y2);
+      tc.stroke();
+    }
+
+    // 4) 굵은 섬유 덩어리 — 한지에 가끔 보이는 펄프 뭉치
+    for (let i = 0; i < 18; i++) {
+      const a = 0.06 + Math.random() * 0.10;
+      tc.strokeStyle = `rgba(100,70,35,${a})`;
+      tc.lineWidth = 1.4 + Math.random() * 1.8;
+      tc.lineCap = 'round';
+      tc.beginPath();
+      const x1 = Math.random() * W;
+      const y1 = Math.random() * H;
+      const len = 30 + Math.random() * 90;
+      const ang = Math.random() * Math.PI * 2;
+      const x2 = x1 + Math.cos(ang) * len;
+      const y2 = y1 + Math.sin(ang) * len;
+      tc.moveTo(x1, y1);
+      tc.quadraticCurveTo(
+        (x1 + x2) / 2 + (Math.random() - 0.5) * 12,
+        (y1 + y2) / 2 + (Math.random() - 0.5) * 12,
+        x2, y2
+      );
+      tc.stroke();
+    }
+
+    // 5) 큰 얼룩 / 점 — 옅은 갈색 원
+    for (let i = 0; i < 90; i++) {
+      const a = 0.025 + Math.random() * 0.055;
+      tc.fillStyle = `rgba(90,65,30,${a})`;
+      const rad = 1.5 + Math.random() * 6;
       tc.beginPath();
       tc.arc(Math.random() * W, Math.random() * H, rad, 0, Math.PI * 2);
       tc.fill();
     }
 
-    // 3) 가로 섬유 결 — 아주 옅은 선
-    for (let i = 0; i < 55; i++) {
-      tc.strokeStyle = `rgba(110,85,50,${0.02 + Math.random() * 0.035})`;
-      tc.lineWidth = 0.4 + Math.random() * 0.8;
-      tc.beginPath();
-      const y = Math.random() * H;
-      const x1 = Math.random() * W * 0.4;
-      const x2 = W - Math.random() * W * 0.4;
-      tc.moveTo(x1, y);
-      tc.bezierCurveTo(x1 + 60, y + (Math.random() - 0.5) * 4,
-                       x2 - 60, y + (Math.random() - 0.5) * 4,
-                       x2, y);
-      tc.stroke();
-    }
-
-    // 4) 가장자리 비네팅 — 책 페이지처럼 가장자리가 살짝 어둑
-    const grad = tc.createRadialGradient(W/2, H/2, W*0.35, W/2, H/2, W*0.72);
+    // 6) 가장자리 비네팅 — 한지가 햇빛에 살짝 그을린 느낌
+    const grad = tc.createRadialGradient(W/2, H/2, W*0.30, W/2, H/2, W*0.78);
     grad.addColorStop(0, 'rgba(0,0,0,0)');
-    grad.addColorStop(1, 'rgba(80,55,25,0.10)');
+    grad.addColorStop(1, 'rgba(80,50,15,0.16)');
     tc.fillStyle = grad;
     tc.fillRect(0, 0, W, H);
 
@@ -467,13 +521,21 @@
       ctx.fillText(tag, W / 2, py + ph / 2 + 4);
     }
 
-    // 헤드라인 — 만년필 잉크
+    // 헤드라인 — 먹빛 + 획 강화 (faux-bold: stroke + fill 같은 색)
     ctx.font = `400 ${f}px ${HEAD_FONT}`;
     setLS();
     ctx.fillStyle = INK_COLOR;
+    ctx.strokeStyle = INK_COLOR;
+    ctx.lineWidth = Math.max(2, f * 0.035);
+    ctx.lineJoin = 'round';
+    ctx.miterLimit = 2;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    lines.forEach((ln, i) => ctx.fillText(ln, W / 2, startY + i * lh));
+    lines.forEach((ln, i) => {
+      const y = startY + i * lh;
+      ctx.strokeText(ln, W / 2, y);
+      ctx.fillText(ln, W / 2, y);
+    });
 
     drawLogo();
   }
