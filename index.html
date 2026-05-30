@@ -46,6 +46,28 @@
     letter-spacing: -0.3px;
   }
   
+  .tabs {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    max-width: 500px;
+  }
+  .tab {
+    flex: 1;
+    text-align: center;
+    padding: 11px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    text-decoration: none;
+    cursor: pointer;
+    background: #2a2a2a;
+    color: #999;
+    border: 1px solid #3a3a3a;
+  }
+  .tab.active { background: #fff; color: #000; border-color: #fff; }
+
   .controls {
     width: 100%;
     max-width: 500px;
@@ -203,6 +225,11 @@
 <body>
 
 <h1>익명속닥 인스타 릴스 썸네일 생성기</h1>
+
+<div class="tabs">
+  <span class="tab active">릴스용</span>
+  <a class="tab" href="feed.html">피드용</a>
+</div>
 
 <div class="controls">
   <div>
