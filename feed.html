@@ -190,7 +190,8 @@
   </div>
 
   <button onclick="download()">📥 이미지 저장 (1080×1350)</button>
-  <button class="secondary" onclick="copyImg()">📋 클립보드 복사</button>
+  <button class="secondary" onclick="copyImg()">📋 이미지 클립보드 복사</button>
+  <button class="secondary" onclick="copyCaption()">📝 인스타 설명글 복사</button>
 
   <button class="toggle-advanced" onclick="toggleAdvanced()">⚙️ 세부 조정 (자동 권장)</button>
 
@@ -549,7 +550,7 @@
     ctx.miterLimit = 2;
     ctx.textBaseline = "middle";
 
-    const baseLW = Math.max(2, f * 0.035);
+    const baseLW = Math.max(0.8, f * 0.012);
     const rand = seededRandom(hashStr(title + '|' + f));
 
     lines.forEach((ln, i) => {
@@ -630,6 +631,25 @@
         alert('이 브라우저는 복사가 안 돼요. "이미지 저장"을 써주세요.');
       }
     }, 'image/png');
+  }
+
+  // 인스타 설명글 — 한 번 누르면 바로 복사
+  const CAPTION = `#익명속닥
+
+————————————
+
+매일 현실 고민을 받아보세요!
+@sssokdak
+@sssokdak
+@sssokdak`;
+
+  async function copyCaption() {
+    try {
+      await navigator.clipboard.writeText(CAPTION);
+      alert('설명글이 클립보드에 복사됐어요!');
+    } catch (e) {
+      alert('복사 실패. 직접 선택해서 복사해주세요.');
+    }
   }
 
   // 종이 질감 미리 생성 + 폰트가 늦게 로드돼도 자동 재렌더

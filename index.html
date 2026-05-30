@@ -243,7 +243,8 @@
   </div>
   
   <button onclick="downloadImage()">📥 이미지 저장 (1080×1920)</button>
-  <button class="secondary" onclick="copyToClipboard()">📋 클립보드 복사</button>
+  <button class="secondary" onclick="copyToClipboard()">📋 이미지 클립보드 복사</button>
+  <button class="secondary" onclick="copyCaption()">📝 인스타 설명글 복사</button>
   
   <button class="toggle-advanced" onclick="toggleAdvanced()">⚙️ 세부 조정 (자동 권장)</button>
   
@@ -685,6 +686,25 @@
       });
     } catch (e) {
       alert('이 브라우저는 클립보드 복사 미지원. 저장 버튼 써줘');
+    }
+  }
+
+  // 인스타 설명글 — 한 번 누르면 바로 복사
+  const CAPTION = `#익명속닥
+
+————————————
+
+매일 현실 고민을 받아보세요!
+@sssokdak
+@sssokdak
+@sssokdak`;
+
+  async function copyCaption() {
+    try {
+      await navigator.clipboard.writeText(CAPTION);
+      alert('설명글이 클립보드에 복사됐어요!');
+    } catch (e) {
+      alert('복사 실패. 직접 선택해서 복사해주세요.');
     }
   }
   
