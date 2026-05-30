@@ -244,7 +244,10 @@
   
   <button onclick="downloadImage()">📥 이미지 저장 (1080×1920)</button>
   <button class="secondary" onclick="copyToClipboard()">📋 이미지 클립보드 복사</button>
-  <button class="secondary" onclick="copyCaption()">📝 인스타 설명글 복사</button>
+  <div style="display:flex; gap:8px;">
+    <button class="secondary" style="flex:1;" onclick="copyCaption()">📝 인스타 설명글 복사</button>
+    <button class="secondary" style="flex:0 0 auto; padding-left:18px; padding-right:18px;" onclick="editCaption()" title="설명글 수정">✏️</button>
+  </div>
   
   <button class="toggle-advanced" onclick="toggleAdvanced()">⚙️ 세부 조정 (자동 권장)</button>
   
@@ -689,8 +692,9 @@
     }
   }
 
-  // 인스타 설명글 — 한 번 누르면 바로 복사
-  const CAPTION = `#익명속닥
+  // 인스타 설명글 — 한 번 누르면 바로 복사 (수정 시 localStorage에 저장됨)
+  const CAPTION_KEY = 'sssokdak-caption';
+  const DEFAULT_CAPTION = `#익명속닥 #썰
 
 ————————————
 
@@ -699,13 +703,89 @@
 @sssokdak
 @sssokdak`;
 
+  function getCaption() {
+    return localStorage.getItem(CAPTION_KEY) || DEFAULT_CAPTION;
+  }
+
   async function copyCaption() {
     try {
-      await navigator.clipboard.writeText(CAPTION);
+      await navigator.clipboard.writeText(getCaption());
       alert('설명글이 클립보드에 복사됐어요!');
     } catch (e) {
       alert('복사 실패. 직접 선택해서 복사해주세요.');
     }
+  }
+
+  function editCaption() {
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+      z-index: 9999; display: flex; align-items: center; justify-content: center;
+      padding: 20px; overflow-y: auto;
+    `;
+    const box = document.createElement('div');
+    box.style.cssText = `
+      background: #fff; border-radius: 14px; padding: 20px;
+      width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 12px;
+      font-family: -apple-system, "Apple SD Gothic Neo", sans-serif;
+    `;
+    const title = document.createElement('div');
+    title.style.cssText = 'font-weight:700; font-size:16px; color:#000;';
+    title.textContent = '인스타 설명글 수정';
+
+    const ta = document.createElement('textarea');
+    ta.value = getCaption();
+    ta.style.cssText = `
+      width: 100%; min-height: 240px; padding: 12px;
+      border: 1px solid #ddd; border-radius: 8px;
+      font-size: 14px; line-height: 1.5; resize: vertical;
+      font-family: inherit; box-sizing: border-box;
+      color: #000; background: #fafafa;
+    `;
+
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex; gap:8px; flex-wrap:wrap;';
+
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = '저장';
+    saveBtn.style.cssText = `
+      flex: 1; padding: 12px; background: #161018; color: #fff;
+      border: none; border-radius: 8px; font-weight: 700; font-size: 15px;
+      font-family: inherit; cursor: pointer; min-width: 100px;
+    `;
+    saveBtn.onclick = () => {
+      localStorage.setItem(CAPTION_KEY, ta.value);
+      document.body.removeChild(modal);
+      alert('저장됨!');
+    };
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = '취소';
+    cancelBtn.style.cssText = `
+      flex: 1; padding: 12px; background: #eee; color: #000;
+      border: none; border-radius: 8px; font-weight: 600; font-size: 15px;
+      font-family: inherit; cursor: pointer; min-width: 80px;
+    `;
+    cancelBtn.onclick = () => document.body.removeChild(modal);
+
+    const resetBtn = document.createElement('button');
+    resetBtn.textContent = '기본값';
+    resetBtn.style.cssText = `
+      flex: 0 0 auto; padding: 12px 16px; background: #fff; color: #666;
+      border: 1px solid #ddd; border-radius: 8px; font-weight: 600; font-size: 14px;
+      font-family: inherit; cursor: pointer;
+    `;
+    resetBtn.onclick = () => { ta.value = DEFAULT_CAPTION; };
+
+    btnRow.appendChild(saveBtn);
+    btnRow.appendChild(cancelBtn);
+    btnRow.appendChild(resetBtn);
+
+    box.appendChild(title);
+    box.appendChild(ta);
+    box.appendChild(btnRow);
+    modal.appendChild(box);
+    document.body.appendChild(modal);
   }
   
   // Live update
