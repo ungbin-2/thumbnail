@@ -189,7 +189,7 @@
     <div class="swatch-row" id="swatches"></div>
   </div>
 
-  <button onclick="download()">📥 이미지 저장 (1080×1350)</button>
+  <button onclick="downloadImage()">📥 이미지 저장 (1080×1350)</button>
   <button class="secondary" onclick="copyImg()">📋 이미지 클립보드 복사</button>
   <button class="secondary" onclick="copyCaption()">📝 인스타 설명글 복사</button>
 
@@ -613,14 +613,67 @@
     const t = (titleEl.value.replace(/\n/g, ' ').trim().slice(0, 14)) || '피드썸네일';
     return t + '.png';
   }
-  function download() {
-    canvas.toBlob(b => {
+  // iOS Safari 감지
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+  function downloadImage() {
+    const dataUrl = canvas.toDataURL('image/png');
+
+    if (isIOS) {
+      // iOS Safari: 이미지를 모달로 띄워서 꾹 눌러 저장
+      showImageModal(dataUrl);
+    } else {
+      // 데스크탑/안드로이드: 일반 다운로드
       const a = document.createElement('a');
-      a.href = URL.createObjectURL(b);
+      a.href = dataUrl;
       a.download = tsName();
       document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    }, 'image/png');
+    }
+  }
+
+  function showImageModal(dataUrl) {
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      position: fixed; inset: 0; background: rgba(0,0,0,0.95);
+      z-index: 9999; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; padding: 20px;
+      overflow-y: auto;
+    `;
+
+    const instruction = document.createElement('div');
+    instruction.style.cssText = `
+      color: #fff; font-size: 16px; text-align: center;
+      margin-bottom: 16px; line-height: 1.5;
+      font-family: -apple-system, "Apple SD Gothic Neo", sans-serif;
+    `;
+    instruction.innerHTML = `
+      <div style="font-weight:700; font-size:18px; margin-bottom:8px;">📸 이미지를 꾹 눌러주세요</div>
+      <div style="color:#aaa; font-size:14px;">→ "사진에 추가" 선택하면<br>사진앱에 저장됩니다</div>
+    `;
+
+    const img = document.createElement('img');
+    img.src = dataUrl;
+    img.style.cssText = `
+      max-width: 100%; max-height: 65vh;
+      border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+      -webkit-touch-callout: default;
+      user-select: auto; -webkit-user-select: auto;
+    `;
+
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '닫기';
+    closeBtn.style.cssText = `
+      margin-top: 20px; padding: 14px 40px;
+      background: #fff; color: #000; border: none;
+      border-radius: 10px; font-size: 16px; font-weight: 700;
+      font-family: inherit; cursor: pointer;
+    `;
+    closeBtn.onclick = () => document.body.removeChild(modal);
+
+    modal.appendChild(instruction);
+    modal.appendChild(img);
+    modal.appendChild(closeBtn);
+    document.body.appendChild(modal);
   }
   async function copyImg() {
     canvas.toBlob(async b => {
@@ -634,7 +687,7 @@
   }
 
   // 인스타 설명글 — 한 번 누르면 바로 복사
-  const CAPTION = `#익명속닥
+  const CAPTION = `#익명속닥 #썰
 
 ————————————
 
